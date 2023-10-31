@@ -57,6 +57,9 @@ static uint8_t _zmk_keymap_layer_default = 0;
 #define LAYER_LABEL(node)                                                                          \
     COND_CODE_0(DT_NODE_HAS_PROP(node, label), (NULL), (DT_PROP(node, label))),
 
+#define LAYER_COLOR(node)                                                                          \
+    COND_CODE_0(DT_NODE_HAS_PROP(node, color), (NULL), (DT_PROP(node, color))),
+
 // State
 
 // When a behavior handles a key position "down" event, we record the layer state
@@ -69,6 +72,9 @@ static struct zmk_behavior_binding zmk_keymap[ZMK_KEYMAP_LAYERS_LEN][ZMK_KEYMAP_
 
 static const char *zmk_keymap_layer_names[ZMK_KEYMAP_LAYERS_LEN] = {
     DT_INST_FOREACH_CHILD(0, LAYER_LABEL)};
+
+static const int zmk_keymap_layer_colors[ZMK_KEYMAP_LAYERS_LEN] = {
+    DT_INST_FOREACH_CHILD(0, LAYER_COLOR)};
 
 #if ZMK_KEYMAP_HAS_SENSORS
 

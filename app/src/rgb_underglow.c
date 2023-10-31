@@ -25,6 +25,7 @@
 #include <zmk/events/activity_state_changed.h>
 #include <zmk/events/usb_conn_state_changed.h>
 #include <zmk/workqueue.h>
+#include <zmk/keymap.h>
 
 LOG_MODULE_DECLARE(zmk, CONFIG_ZMK_LOG_LEVEL);
 
@@ -49,6 +50,7 @@ enum rgb_underglow_effect {
     UNDERGLOW_EFFECT_BREATHE,
     UNDERGLOW_EFFECT_SPECTRUM,
     UNDERGLOW_EFFECT_SWIRL,
+    UNDERGLOW_EFFECT_LAYER,
     UNDERGLOW_EFFECT_NUMBER // Used to track number of underglow effects
 };
 
@@ -175,8 +177,34 @@ static void zmk_rgb_underglow_effect_swirl() {
     state.animation_step = state.animation_step % HUE_MAX;
 }
 
+static void layer_state_changed_listener() {
+    if (!state.on || !state.current_effect == UNDERGLOW_EFFECT_LAYER) {
+        return;
+    }
+
+    int layer = zmk_keymap_layer_state();
+    int highestLayer = 0;
+    for (int i = 0; i < 32; i++) {
+        if (layer & 1 << i) {
+            highestLayer = i;
+        }
+    }
+    struct zmk_led_hsb hsb = zmk_keymap_layer_colors[i];
+
+    if (hsb.h == 0 && hsb.s == 0 && hsb.b == 0) {
+        hsb = state.color;
+    }
+
+    for (int i = 0; i < STRIP_NUM_PIXELS; i++) {
+        pixels[i] = hsb_to_rgb(hsb_scale_min_max(hsb));
+    }
+}
+
+ZMK_LISTENER(rgb_underglow, layer_state_changed_listener);
+ZMK_SUBSCRIPTION(rgb_underglow, zmk_layer_state_changed);
+
 static void zmk_rgb_underglow_tick(struct k_work *work) {
-    switch (state.current_effect) {
+    switch (state.icurrent_effect) {
     case UNDERGLOW_EFFECT_SOLID:
         zmk_rgb_underglow_effect_solid();
         break;
@@ -188,6 +216,9 @@ static void zmk_rgb_underglow_tick(struct k_work *work) {
         break;
     case UNDERGLOW_EFFECT_SWIRL:
         zmk_rgb_underglow_effect_swirl();
+        break;
+    case UNDERGLOW_EFFECT_LAYER:
+        // will be handled by the event listener
         break;
     }
 
